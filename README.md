@@ -126,6 +126,10 @@ In this example we mark the `status` and `role` fields as readonly.
 Any data set by a REST client in ReadOnly properties will be stripped out
 on the way to the server and will not be saved on the updated model instance.
 
+This also applies to each item when the create endpoint receives a JSON
+array of objects, so batching several creates in a single request does not
+bypass the mixin.
+
 TESTING
 =============
 
