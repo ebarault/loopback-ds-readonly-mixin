@@ -85,6 +85,24 @@ describe('loopback datasource readonly property (server.js)', function() {
         });
     });
 
+    it('should not save readonly properties on create with an array payload.', function(done) {
+      this.post('/products')
+        .send([
+          {name: 'test product 1', status: 'active'},
+          {name: 'test product 2', status: 'disabled'}
+        ])
+        .expect(200)
+        .end(function(err, res) {
+          expect(err).to.not.exist;
+          expect(res.body).to.be.an('array');
+          expect(res.body).to.have.length(2);
+          res.body.forEach(function(product) {
+            expect(product.status).to.not.exist;
+          });
+          done();
+        });
+    });
+
     lt.beforeEach.givenModel('product', {name: 'some book', type: 'book', status: 'pending'});
     it('should not change readonly properties on update (single readonly property)', function(done) {
       var product = this.product;
