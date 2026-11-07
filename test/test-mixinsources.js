@@ -64,9 +64,48 @@ describe('loopback datasource readonly property (mixin sources.js)', function() 
           expect(res.body).to.be.an('array');
           expect(res.body).to.have.length(2);
           res.body.forEach(function(product) {
+            expect(product.name).to.match(/^test product/);
             expect(product.status).to.not.exist;
           });
-          done();
+          app.models.Product.findById(res.body[0].id, function(err, p1) {
+            expect(err).to.not.exist;
+            expect(p1.name).to.equal('test product 1');
+            expect(p1.status).to.not.exist;
+            app.models.Product.findById(res.body[1].id, function(err, p2) {
+              expect(err).to.not.exist;
+              expect(p2.name).to.equal('test product 2');
+              expect(p2.status).to.not.exist;
+              done();
+            });
+          });
+        });
+    });
+
+    it('should not fail the request when an array payload contains non-object entries.', function(done) {
+      this.post('/api/products')
+        .send([
+          {name: 'test product 3', status: 'active'},
+          null
+        ])
+        .end(function(err, res) {
+          expect(err).to.not.exist;
+          // The mixin only strips readonly keys from object entries; it does
+          // not judge payload shape. A malformed entry must not blow up the
+          // hook with a TypeError (previously a 500), LoopBack decides what
+          // to do with it.
+          expect(res.status).to.equal(200);
+          expect(res.body).to.have.length(2);
+          expect(res.body[0].name).to.equal('test product 3');
+          expect(res.body[0].status).to.not.exist;
+          // LoopBack currently creates an empty instance for the null entry;
+          // whether that input is acceptable is the framework's call.
+          expect(res.body[1].name).to.not.exist;
+          app.models.Product.findById(res.body[0].id, function(err, p1) {
+            expect(err).to.not.exist;
+            expect(p1.name).to.equal('test product 3');
+            expect(p1.status).to.not.exist;
+            done();
+          });
         });
     });
 
@@ -114,6 +153,16 @@ describe('loopback datasource readonly property (mixin sources.js)', function() 
           event: 'update',
           user: 'john'
         })
+        .expect(403)
+        .end(done);
+    });
+
+    it('should reject array payloads on create for a full read only model.', function(done) {
+      this.post('/api/audittrails')
+        .send([
+          {event: 'edit', user: 'tom'},
+          {event: 'view', user: 'john'}
+        ])
         .expect(403)
         .end(done);
     });
